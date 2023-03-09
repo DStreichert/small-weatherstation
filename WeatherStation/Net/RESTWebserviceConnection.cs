@@ -535,6 +535,9 @@ namespace WeatherStation.Net
         }
     }
 
+    /// <summary>
+    /// The HTTP request methods.
+    /// </summary>
     public enum HTTPRequestMethods
     {
         GET, POST, PUT, PATCH, DELETE, HEAD, TRACE, OPTIONS, CONNECT
