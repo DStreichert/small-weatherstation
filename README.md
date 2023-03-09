@@ -1,6 +1,6 @@
 Small WeatherStation
 ============
-<a href="https://creativecommons.org/publicdomain/zero/1.0/" target="_blank">![GitHub](https://img.shields.io/github/license/DStreichert/small-weatherstation.svg)</a> [![GitHub Issues](https://img.shields.io/github/issues/DStreichert/small-weatherstation.svg)](https://github.com/DStreichert/small-weatherstation/issues)
+![GitHub](https://img.shields.io/github/license/DStreichert/small-weatherstation.svg) [![GitHub Issues](https://img.shields.io/github/issues/DStreichert/small-weatherstation.svg)](https://github.com/DStreichert/small-weatherstation/issues)
 
 This is only a small weatherstation, which in C# and WPF created is.
 
@@ -20,12 +20,12 @@ This is only a small weatherstation, which in C# and WPF created is.
   - Integrate the apikey.config into your WeatherStation project
   - Change the settings of this apikey.config file in Visualstudio to copy it to the output directory.
   - Compile the project and execute the exe file
-+ Or:
-  + Compile the WeatherStation project
-  + Go to the folder of the WeatherStation.exe file
-  + Create apikey.onfig file in this folder
-  + Copy your apikey from openweathermap.org into this apikey.config file
-  + Execute the WeatherStation.exe
+- Or:
+  - Compile the WeatherStation project
+  - Go to the folder of the WeatherStation.exe file
+  - Create apikey.onfig file in this folder
+  - Copy your apikey from openweathermap.org into this apikey.config file
+  - Execute the WeatherStation.exe
 - The apikey.config file must be in the same folder as the exe file.
 
 ---
