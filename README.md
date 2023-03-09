@@ -3,6 +3,7 @@ Small WeatherStation
 ![GitHub](https://img.shields.io/github/license/DStreichert/small-weatherstation.svg?style=for-the-badge&) 
 [![GitHub Issues](https://img.shields.io/github/issues/DStreichert/small-weatherstation.svg?style=for-the-badge&)](https://github.com/DStreichert/small-weatherstation/issues)
 [![LinkedIn](https://img.shields.io/badge/-LinkedIn-black.svg?style=for-the-badge&logo=linkedin&colorB=555)](https://www.linkedin.com/in/danny-streichert/)
+[![XING](https://img.shields.io/badge/-XING-black.svg?style=for-the-badge&logo=xing&color=eee&logoColor=0698a0)](https://www.xing.com/profile/Danny_Streichert)
 
 This is only a small weatherstation, which in C# and WPF created is.
 
