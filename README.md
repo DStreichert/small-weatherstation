@@ -1,6 +1,6 @@
 Small WeatherStation
 ============
-![GitHub](https://img.shields.io/github/license/DStreichert/small-weatherstation.svg) [![GitHub Stars](https://img.shields.io/github/stars/DStreichert/small-weatherstation.svg)](https://github.com/DStreichert/small-weatherstation/stargazers) [![GitHub Issues](https://img.shields.io/github/issues/DStreichert/small-weatherstation.svg)](https://github.com/DStreichert/small-weatherstation/issues)
+[![GitHub](https://img.shields.io/github/license/DStreichert/small-weatherstation.svg)](https://creativecommons.org/publicdomain/zero/1.0/) [![GitHub Issues](https://img.shields.io/github/issues/DStreichert/small-weatherstation.svg)](https://github.com/DStreichert/small-weatherstation/issues)
 
 This is only a small weatherstation, which in C# and WPF created is.
 
