@@ -90,7 +90,7 @@ namespace WeatherStation
         }
 
         /// <summary>
-        /// Execute the encapsulated command
+        /// ExecuteBackgroundWorker the encapsulated command
         /// </summary>
         /// <param name="parameter">the parameter that represents the execution method</param>
         public void Execute(object parameter)

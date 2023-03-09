@@ -49,6 +49,7 @@ namespace WeatherStation.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("1970-01-01")]
         public global::System.DateTime lastNotificationAbove30Degrees {
             get {
                 return ((global::System.DateTime)(this["lastNotificationAbove30Degrees"]));

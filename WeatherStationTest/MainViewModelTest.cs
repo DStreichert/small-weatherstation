@@ -24,10 +24,10 @@ namespace WeatherStationTest
             // arrange
             var testdata = new object[] { "20255", "DE", "", "" };
             this.viewmodel.Latitude = 0;
-            if (this.viewmodel.Plz == testdata[0].ToString() && this.viewmodel.Country == testdata[1].ToString())
-            {
-                return;
-            }
+            //if (this.viewmodel.Plz == testdata[0].ToString() && this.viewmodel.Country == testdata[1].ToString())
+            //{
+            //    return;
+            //}
 
             // act
             this.viewmodel.BtnGetCoordinates_Click(testdata);
