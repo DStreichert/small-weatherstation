@@ -1,19 +1,32 @@
 Small WeatherStation
 ============
-[![GitHub Stars](https://img.shields.io/github/stars/DStreichert/small-weatherstation.svg)](https://github.com/DStreichert/small-weatherstation/stargazers) [![GitHub Issues](https://img.shields.io/github/issues/DStreichert/small-weatherstation.svg)](https://github.com/DStreichert/small-weatherstation/issues)
+![GitHub](https://img.shields.io/github/license/DStreichert/small-weatherstation.svg) [![GitHub Stars](https://img.shields.io/github/stars/DStreichert/small-weatherstation.svg)](https://github.com/DStreichert/small-weatherstation/stargazers) [![GitHub Issues](https://img.shields.io/github/issues/DStreichert/small-weatherstation.svg)](https://github.com/DStreichert/small-weatherstation/issues)
 
 This is only a small weatherstation, which in C# and WPF created is.
 
-![Vorschau](https://user-images.githubusercontent.com/42210597/223844453-bea73638-502c-41eb-884b-0614dfd61ee6.png)
+<div style="text-align: center;">
+
+![Preview picture](https://user-images.githubusercontent.com/42210597/223844453-bea73638-502c-41eb-884b-0614dfd61ee6.png)
+
+</div>
 
 ---
 
 ## Usage
-After you clone this repo with Visualstudio or similar, go to its WeatherStation sub folder and create the apikey.onfig file with your apikey from openweathermap.org.
-Integrate the apikey.config in your project and change the settings from this file in visualstudio to copy in output  directory.
-Then compile the project and execute the exe file.
-
-The apikey.config file must be in the same folder from the exe file.
+- Clone this repo using Visualstudio or similar software.
+- In Visualstudio:
+  - Go to the WeatherStation subfolder and create the apikey.onfig file
+  - Copy your apikey from openweathermap.org into the apikey.config file
+  - Integrate the apikey.config into your WeatherStation project
+  - Change the settings of this apikey.config file in Visualstudio to copy it to the output directory.
+  - Compile the project and execute the exe file
++ Or:
+  + Compile the WeatherStation project
+  + Go to the folder of the WeatherStation.exe file
+  + Create apikey.onfig file in this folder
+  + Copy your apikey from openweathermap.org into this apikey.config file
+  + Execute the WeatherStation.exe
+- The apikey.config file must be in the same folder as the exe file.
 
 ---
 
@@ -21,4 +34,4 @@ The apikey.config file must be in the same folder from the exe file.
 >You can check out the full license [here](https://creativecommons.org/publicdomain/zero/1.0/)
 
 This project is licensed under the terms of the **Creative Commons Zero v1.0 Universal** license.
-This license has no copyright and you can do with this codde what you want.
+This license has no copyright and you can do with this code what you want.
