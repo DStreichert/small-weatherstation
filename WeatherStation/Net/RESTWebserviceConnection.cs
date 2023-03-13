@@ -9,26 +9,39 @@ using System.Threading.Tasks;
 
 namespace WeatherStation.Net
 {
+    /// <summary>
+    /// The REST webservice connection object.
+    /// </summary>
     public class RESTWebserviceConnection : IDisposable, ICloneable
     {
         #region fields
         /// <summary>
         /// Base Uri for the Webservice Endpoint
         /// </summary>
-        private string BaseUri = null;
-        private string AccessUri = null;
+        private string _baseUri = null;
+        private string _accessUri = null;
 
         /// <summary>
         /// Request Object for the Webservice
         /// </summary>
-        private HttpWebRequest Request = null;
-        private HttpWebResponse WebResponse = null;
-        private string username;
-        private string password;
-        private string type;
-        public string Accept;
+        private HttpWebRequest _request = null;
+        private HttpWebResponse _webResponse = null;
+        private string _username;
+        private string _password;
+        private string _type;
 
+        /// <summary>
+        /// Gets or sets the value of the Accept HTTP header.
+        /// </summary>
+        public string Accept { get; set; }
+
+        /// <summary>
+        /// Gets or sets the additional headers.
+        /// </summary>
         public List<KeyValuePair<string, string>> AdditionalHeaders { get; set; } = new List<KeyValuePair<string, string>>();
+        /// <summary>
+        /// Gets or sets the character encoding.
+        /// </summary>
         public Encoding Encoding { get; set; } = Encoding.UTF8;
 
         #endregion
@@ -37,48 +50,63 @@ namespace WeatherStation.Net
         /// <summary>
         /// Initializes a new instance of the <see cref="RESTWebserviceConnection"/> class.
         /// </summary>
-        /// <param name="baseUri">The base URI.</param>
-        /// <param name="type">Type of the content.</param>
-        public RESTWebserviceConnection(string baseUri, string type, string userAgent = null, Encoding encoding = null)
+        /// <param name="baseUri">The base uri.</param>
+        /// <param name="type">The type.</param>
+        /// <param name="encoding">The encoding.</param>
+        /// 
+        public RESTWebserviceConnection(string baseUri, string type, Encoding encoding = null)
         {
             ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12 | SecurityProtocolType.Tls | SecurityProtocolType.Tls11;
-            this.BaseUri = baseUri;
-            this.type = type;
+            this._baseUri = baseUri;
+            this._type = type;
             if (encoding != null)
                 this.Encoding = encoding;
         }
 
-        public RESTWebserviceConnection(string baseUri, string type, string userName, string password, string userAgent = null) : this(baseUri, type, userAgent)
+        /// <summary>
+        /// Initializes a new instance of the <see cref="RESTWebserviceConnection"/> class.
+        /// </summary>
+        /// <param name="baseUri">The base uri.</param>
+        /// <param name="type">The type.</param>
+        /// <param name="userName">The user name.</param>
+        /// <param name="password">The password.</param>
+        /// 
+        public RESTWebserviceConnection(string baseUri, string type, string userName, string password) : this(baseUri, type)
         {
-            this.username = userName;
-            this.password = password;
+            this._username = userName;
+            this._password = password;
         }
         #endregion
 
         #region methods
 
+        /// <summary>
+        /// Initializes a new System.Net.WebRequest instance for the specified URI scheme.
+        /// </summary>
+        /// <param name="accessUri">The access uri.</param>
+        /// <param name="type">The type.</param>
         private void CreateNewRequest(string accessUri, string type)
         {
-            this.AccessUri = accessUri;
-            this.Request = WebRequest.Create(this.BaseUri + this.AccessUri) as HttpWebRequest;
-            this.Request.KeepAlive = true;
-            this.Request.Timeout = 240000;
+            this._accessUri = accessUri;
+            this._request = WebRequest.Create(this._baseUri + this._accessUri) as HttpWebRequest;
+            this._request.KeepAlive = true;
+            this._request.Timeout = 240000;
             if (this.AdditionalHeaders?.Any() == true)
             {
-                var m = this.Request.Headers.GetType().GetMethod("AddWithoutValidate", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+                var m = this._request.Headers.GetType().GetMethod("AddWithoutValidate", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
                 foreach (KeyValuePair<string, string> item in this.AdditionalHeaders)
                 {
-                    if (!this.Request.Headers.AllKeys.Contains(item.Key))
+                    if (!this._request.Headers.AllKeys.Contains(item.Key))
                     {
-                        m.Invoke(this.Request.Headers, new string[] { item.Key, item.Value });
+                        m.Invoke(this._request.Headers, new string[] { item.Key, item.Value });
                     }
                 }
             }
-            if (string.IsNullOrWhiteSpace(this.Request.ContentType))
+            if (string.IsNullOrWhiteSpace(this._request.ContentType))
             {
-                this.Request.ContentType = type ?? this.type;
+                this._request.ContentType = type ?? this._type;
             }
-            this.Request.Accept = this.Accept;
+            this._request.Accept = this.Accept;
         }
 
         /// <summary>
@@ -88,35 +116,35 @@ namespace WeatherStation.Net
         /// <param name="password">The password.</param>
         public void SetCredentials(string userName, string password)
         {
-            this.Request.Credentials = new NetworkCredential(userName, password);
+            this._request.Credentials = new NetworkCredential(userName, password);
         }
 
         /// <summary>
-        /// Gets the ressource.
+        /// Gets the ressource from the endpoint with the get method.
         /// </summary>
-        /// <param name="uri">The URI.</param>
-        /// <returns></returns>
+        /// <returns>A <see cref="Stream"/>.</returns>
         private Stream GetRessource()
         {
-            this.Request.Method = nameof(HTTPRequestMethods.GET);
-            this.WebResponse = this.Request.GetResponse() as HttpWebResponse;
+            this._request.Method = nameof(HTTPRequestMethods.GET);
+            this._webResponse = this._request.GetResponse() as HttpWebResponse;
 
             return this.GetResponse();
         }
 
         /// <summary>
-        /// Patch the ressource.
+        /// Sends the ressource zu the endpoint with the patch method.
         /// </summary>
-        /// <returns></returns>
+        /// <param name="byteData">The patch data.</param>
+        /// <returns>A <see cref="Stream"/>.</returns>
         private Stream PatchRessource(byte[] byteData)
         {
             if (byteData == null)
             {
                 byteData = new byte[] { };
             }
-            this.Request.Method = nameof(HTTPRequestMethods.PATCH);
+            this._request.Method = nameof(HTTPRequestMethods.PATCH);
             // Wenn die Zugangsdaten nicht stimmen wird hier eine Exception geworfen
-            using (Stream reqStream = this.Request.GetRequestStream())
+            using (Stream reqStream = this._request.GetRequestStream())
             {
                 reqStream.Write(byteData, 0, byteData.Length);
             }
@@ -124,23 +152,26 @@ namespace WeatherStation.Net
             return this.GetResponse();
         }
 
+        /// <summary>
+        /// Gets the ressource async.
+        /// </summary>
+        /// <returns>A System.Threading.Tasks.Task&lt;Stream&gt;.</returns>
         private async System.Threading.Tasks.Task<Stream> GetRessourceAsync()
         {
             // Get response 
-            this.Request.Method = nameof(HTTPRequestMethods.GET);
-            this.WebResponse = await this.Request.GetResponseAsync() as HttpWebResponse;
+            this._request.Method = nameof(HTTPRequestMethods.GET);
+            this._webResponse = await this._request.GetResponseAsync() as HttpWebResponse;
             Stream result = this.GetResponse();
-            this.WebResponse.Close();
+            this._webResponse.Close();
 
             return result;
         }
 
         /// <summary>
-        /// Posts the ressource.
+        /// Sends the ressource zu the endpoint with the post method.
         /// </summary>
-        /// <param name="uri">The URI.</param>
-        /// <param name="requestContentInJSON">The request content in json.</param>
-        /// <returns></returns>
+        /// <param name="byteData">The data to post.</param>
+        /// <returns>A <see cref="Stream"/>.</returns>
         private Stream PostRessource(byte[] byteData)
         {
             if (byteData == null)
@@ -148,10 +179,10 @@ namespace WeatherStation.Net
                 byteData = new byte[] { };
             }
 
-            this.Request.Method = nameof(HTTPRequestMethods.POST);
+            this._request.Method = nameof(HTTPRequestMethods.POST);
 
-            // Wenn die Zugangsdaten nicht stimmen wird hier eine Exception geworfen
-            using (Stream reqStream = this.Request.GetRequestStream())
+            // If the access data is not correct, an exception is thrown here
+            using (Stream reqStream = this._request.GetRequestStream())
             {
                 reqStream.Write(byteData, 0, byteData.Length);
             }
@@ -159,17 +190,16 @@ namespace WeatherStation.Net
         }
 
         /// <summary>
-        /// Deletes the ressource.
+        /// Sends the ressource zu the endpoint with the delete method.
         /// </summary>
-        /// <param name="uri">The URI.</param>
-        /// <param name="requestContentInJSON">The request content in json.</param>
-        /// <returns></returns>
+        /// <param name="requestContentInJSON">The request string in JavaScript Object Notation (JSON).</param>
+        /// <returns>A <see cref="Stream"/>.</returns>
         private Stream DeleteRessource(string requestContentInJSON)
         {
-            this.Request.Method = nameof(HTTPRequestMethods.DELETE);
+            this._request.Method = nameof(HTTPRequestMethods.DELETE);
             if (!string.IsNullOrWhiteSpace(requestContentInJSON))
             {
-                using (var streamWriter = new StreamWriter(this.Request.GetRequestStream()))
+                using (var streamWriter = new StreamWriter(this._request.GetRequestStream()))
                 {
                     streamWriter.Write(requestContentInJSON);
                     streamWriter.Flush();
@@ -180,19 +210,18 @@ namespace WeatherStation.Net
         }
 
         /// <summary>
-        /// Puts the ressource.
+        /// Sends the ressource zu the endpoint with the put method.
         /// </summary>
-        /// <param name="uri">The URI.</param>
-        /// <param name="requestContentInJSON">The request content in json.</param>
-        /// <returns></returns>
+        /// <param name="sentData">The sent data.</param>
+        /// <returns>A <see cref="Stream"/>.</returns>
         private Stream PutRessource(byte[] sentData)
         {
-            this.Request.Method = nameof(HTTPRequestMethods.PUT);
+            this._request.Method = nameof(HTTPRequestMethods.PUT);
             // Get response 
             if (sentData != null)
             {
-                this.Request.ContentLength = sentData.Length;
-                using (Stream reqStream = this.Request.GetRequestStream())
+                this._request.ContentLength = sentData.Length;
+                using (Stream reqStream = this._request.GetRequestStream())
                 {
                     reqStream.Write(sentData, 0, sentData.Length);
                     reqStream.Flush();
@@ -200,24 +229,33 @@ namespace WeatherStation.Net
             }
             else
             {
-                using (Stream reqStream = this.Request.GetRequestStream())
+                using (Stream reqStream = this._request.GetRequestStream())
                 { }
             }
 
             return this.GetResponse();
         }
 
+        /// <summary>
+        /// Gets the stream used to read the body of the server response.
+        /// </summary>
+        /// <returns>A <see cref="Stream"/>.</returns>
         private Stream GetResponse()
         {
-            this.WebResponse = this.Request.GetResponse() as HttpWebResponse;
+            this._webResponse = this._request.GetResponse() as HttpWebResponse;
 
-            Stream ResponseStream = this.WebResponse.GetResponseStream();
-            var responseCode = (int)this.WebResponse.StatusCode;
-            var contentType = this.WebResponse.ContentType;
+            Stream ResponseStream = this._webResponse.GetResponseStream();
+            var responseCode = (int)this._webResponse.StatusCode;
+            var contentType = this._webResponse.ContentType;
 
             return ResponseStream;
         }
 
+        /// <summary>
+        /// Deserializes the <paramref name="ResponseStream"/> to <typeparamref name="T"/> object.
+        /// </summary>
+        /// <param name="ResponseStream">The response of type <see cref="Stream"/>.</param>
+        /// <returns>A <typeparamref name="T"/> object.</returns>
         private T DeserializeToObject<T>(Stream ResponseStream)
         {
             var json = "";
@@ -291,6 +329,11 @@ namespace WeatherStation.Net
         public string DateTimeFormat = null;
         private readonly object _lockObject = new object();
 
+        /// <summary>
+        /// Reads a string in JavaScript Object Notation (JSON) format and returns the deserialized object.
+        /// </summary>
+        /// <param name="json">The json.</param>
+        /// <returns>A <typeparamref name="T"/>.</returns>
         public T DeserializeToObject<T>(string json)
         {
             T obj = default;
@@ -314,16 +357,22 @@ namespace WeatherStation.Net
             return obj;
         }
 
-        public bool IsValidJsonObject<T>(string strInput)
+        /// <summary>
+        /// Is the json string valid and deserializable to neccessary object?
+        /// If yes returns true if not returns false.
+        /// </summary>
+        /// <param name="json">The JavaScript Object Notation (JSON) string.</param>
+        /// <returns>true if valid false if not.</returns>
+        public bool IsJsonObjectValid<T>(string json)
         {
-            if (string.IsNullOrWhiteSpace(strInput)) { return false; }
-            strInput = strInput.Trim();
-            if ((strInput.StartsWith("{") && strInput.EndsWith("}")) || //For object
-                (strInput.StartsWith("[") && strInput.EndsWith("]"))) //For array
+            if (string.IsNullOrWhiteSpace(json)) { return false; }
+            json = json.Trim();
+            if ((json.StartsWith("{") && json.EndsWith("}")) || //For object
+                (json.StartsWith("[") && json.EndsWith("]"))) //For array
             {
                 try
                 {
-                    var obj = this.DeserializeToObject<T>(strInput);
+                    var obj = this.DeserializeToObject<T>(json);
                     return true;
                 }
                 catch (Exception) //some other exception
@@ -337,20 +386,25 @@ namespace WeatherStation.Net
             }
         }
 
+        /// <summary>
+        /// Sends the <paramref name="requestObject"/> as string to the <paramref name="accessUri"/> with the <paramref name="method"/>.
+        /// </summary>
+        /// <param name="accessUri">The access uri.</param>
+        /// <param name="method">The method.</param>
+        /// <param name="requestObject">The request object.</param>
+        /// <returns>A <typeparamref name="T"/>.</returns>
         public T SendRequest<T>(string accessUri, ProvidedRequestMethods method, object requestObject = null)
         {
-            //lock (_lockObject)
-            //{
             T result = default;
-            if (accessUri != this.AccessUri)
+            if (accessUri != this._accessUri)
             {
-                if (this.AccessUri != null)
+                if (this._accessUri != null)
                 {
                     this.Dispose();
                 }
             }
-            this.CreateNewRequest(accessUri, this.type);
-            this.SetCredentials(this.username, this.password);
+            this.CreateNewRequest(accessUri, this._type);
+            this.SetCredentials(this._username, this._password);
 
             var data = new byte[0];
             var json = "";
@@ -367,7 +421,7 @@ namespace WeatherStation.Net
                 json = this.SerializeToJSON(requestObject, settings);
                 data = this.Encoding.GetBytes(json);
             }
-            this.Request.AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate;
+            this._request.AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate;
             Stream stream = null;
             switch (method)
             {
@@ -376,19 +430,19 @@ namespace WeatherStation.Net
                     break;
                 case ProvidedRequestMethods.POST:
                     //this.Request.ContentType = "application/x-www-form-urlencoded";
-                    this.Request.ContentLength = data.LongLength;
+                    this._request.ContentLength = data.LongLength;
                     stream = this.PostRessource(data);
                     break;
                 case ProvidedRequestMethods.PUT:
-                    this.Request.ContentLength = data.LongLength;
+                    this._request.ContentLength = data.LongLength;
                     stream = this.PutRessource(data);
                     break;
                 case ProvidedRequestMethods.DELETE:
-                    this.Request.ContentLength = data.LongLength;
+                    this._request.ContentLength = data.LongLength;
                     stream = this.DeleteRessource(json);
                     break;
                 case ProvidedRequestMethods.PATCH:
-                    this.Request.ContentLength = data.LongLength;
+                    this._request.ContentLength = data.LongLength;
                     stream = this.PatchRessource(data);
                     break;
                 default:
@@ -398,17 +452,19 @@ namespace WeatherStation.Net
             {
                 result = this.DeserializeToObject<T>(stream);
             }
-            this.WebResponse.Close();
+            this._webResponse.Close();
             return result;
-            //}
         }
 
+        /// <summary>
+        /// Releases the unmanaged resources used by the WeatherStation.Net.RESTWebserviceConnection object.
+        /// </summary>
         public void Dispose()
         {
             try
             {
-                this.WebResponse?.Close();
-                this.WebResponse?.Dispose();
+                this._webResponse?.Close();
+                this._webResponse?.Dispose();
             }
 #pragma warning disable RCS1075 // Avoid empty catch clause that catches System.Exception.
             catch (Exception) { }
@@ -422,7 +478,7 @@ namespace WeatherStation.Net
 
         private RESTWebserviceConnection Copy()
         {
-            var WS = new RESTWebserviceConnection(this.BaseUri, this.type);
+            var WS = new RESTWebserviceConnection(this._baseUri, this._type);
             foreach (System.Reflection.PropertyInfo prop in this.GetType().GetProperties())
             {
                 if (!(prop.CanWrite && prop.CanRead))
@@ -444,6 +500,12 @@ namespace WeatherStation.Net
             return WS;
         }
 
+        /// <summary>
+        /// Querys the <paramref name="uri"/> with the <paramref name="parameters"/>.
+        /// </summary>
+        /// <param name="uri">The uri.</param>
+        /// <param name="parameters">The parameters.</param>
+        /// <returns>A TOutput.</returns>
         public TOutput Get<TOutput>(string uri = "", List<string> parameters = null)
             where TOutput : class
         {
@@ -457,8 +519,7 @@ namespace WeatherStation.Net
                 uri = string.Concat(uri, "?", string.Join("&", parameters));
             }
 
-            TOutput response = this.SendRequest<TOutput>(uri, RESTWebserviceConnection.ProvidedRequestMethods.GET, null);
-            return response;
+            return this.SendRequest<TOutput>(uri, RESTWebserviceConnection.ProvidedRequestMethods.GET, null);
         }
 
         #endregion
@@ -474,6 +535,9 @@ namespace WeatherStation.Net
         }
     }
 
+    /// <summary>
+    /// The HTTP request methods.
+    /// </summary>
     public enum HTTPRequestMethods
     {
         GET, POST, PUT, PATCH, DELETE, HEAD, TRACE, OPTIONS, CONNECT

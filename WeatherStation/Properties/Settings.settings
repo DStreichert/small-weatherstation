@@ -9,7 +9,7 @@
       <Value Profile="(Default)">9.9512</Value>
     </Setting>
     <Setting Name="lastNotificationAbove30Degrees" Type="System.DateTime" Scope="User">
-      <Value Profile="(Default)" />
+      <Value Profile="(Default)">1970-01-01</Value>
     </Setting>
     <Setting Name="ApiUrl" Type="(Web Service URL)" Scope="Application">
       <Value Profile="(Default)">https://api.openweathermap.org/data/2.5/weather</Value>

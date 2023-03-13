@@ -34,36 +34,29 @@ namespace WeatherStation.ViewModel
             };
             this.TaskWorker.DoWork += (object sender, System.ComponentModel.DoWorkEventArgs e) =>
             {
-                var args = e.Argument as TaskWorker_DataContext;
+                var args = e.Argument as BackgroundWorker_DataContext;
                 this.TaskWorker.ReportProgress(0);
 
-                if (!(args.workerState is TimerState state) || state.TimerCanceled)
+                if (!(args.timerState is TimerState state) || state.TimerCanceled)
                 {
-                    this.ExecuteWorkerStop();
+                    this.StopTimerForBackgroundWorker();
                 }
                 else
                 {
                     bool? result = null;
-                    if (!this.TaskWorker.CancellationPending && !this.IsRunning)
+                    if (!this.TaskWorker.CancellationPending && !this._isRunning)
                     {
                         try
                         {
-                            this.IsRunning = true;
-                            this.LastExecuted = DateTime.Now;
+                            this._isRunning = true;
                             if (!this.TaskWorker.CancellationPending)
                             {
                                 // Do work
-                                args.Result = this.GetWeatherData();
+                                e.Result = result = this.GetWeatherData();
                                 // Work end
-                                e.Result = args;
                                 if (this.TaskWorker.CancellationPending)
                                 {
                                     e.Cancel = true;
-                                }
-
-                                if (args.Result.GetType() == typeof(bool))
-                                {
-                                    result = (bool)args.Result;
                                 }
                             }
                         }
@@ -80,119 +73,103 @@ namespace WeatherStation.ViewModel
                 }
                 if (e.Cancel)
                 {
-                    this.IsRunning = false;
+                    this._isRunning = false;
                 }
             };
             this.TaskWorker.RunWorkerCompleted += (object RunWorkerCompletedSender, System.ComponentModel.RunWorkerCompletedEventArgs eventargs) =>
             {
-                this.IsRunning = false;
-                TaskWorker_DataContext args = null;
-                if (!eventargs.Cancelled)
-                {
-                    args = eventargs.Result as TaskWorker_DataContext;
-                }
+                this._isRunning = false;
+                //BackgroundWorker_DataContext args = null;
+                //if (!eventargs.Cancelled)
+                //{
+                //    args = eventargs.Result as BackgroundWorker_DataContext;
+                //}
             };
-            this.ExecuteWorkerStart();
+            this.StartTimerForBackgroundWorker();
         }
 
-        private string apiKey { get; set; }
+        /// <summary>
+        /// Gets or sets a value indicating whether backgroundworker is running.
+        /// </summary>
+        private bool _isRunning;
+
+        private string _apiKey;
+        /// <summary>
+        /// The api key for weatherdata api
+        /// </summary>
         private string APIKey
         {
             get
             {
-                if (apiKey == null)
+                if (this._apiKey == null)
                 {
-                    using (var fs = new FileStream("apikey.config", FileMode.OpenOrCreate))
-                    using (var sr = new StreamReader(fs))
+                    try
                     {
-                        this.apiKey = sr.ReadToEnd();
+                        using (var fs = new FileStream("apikey.config", FileMode.Open))
+                        using (var sr = new StreamReader(fs))
+                        {
+                            this._apiKey = sr.ReadToEnd();
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Windows.MessageBox.Show(ex.Message);
                     }
                 }
-                return this.apiKey;
+                return this._apiKey;
             }
         }
 
-        public bool GetWeatherData()
-        {
-            var result = false;
-            try
-            {
-                var accessUri = Settings.Default.ApiUrl;
-                using (var WS = new RESTWebserviceConnection(accessUri, RESTWebserviceConnection.ProvidedContentTypes.json))
-                {
-                    WS.Accept = RESTWebserviceConnection.ProvidedContentTypes.json;
-                    var response = WS.Get<API.CurrentWeatherData.Response.Get>("", new List<string> { "lat=" + this.Latitude, "lon=" + this.Longitude, "units=metric", "lang=de", "appid=" + this.APIKey });
-                    this.Temperature = response.main.temp;
-                    this.Pressure = response.main.pressure;
-                    this.Humidity = response.main.humidity;
-                    result = true;
-                }
-                if (this.Temperature >= 30 && DateTime.Compare(Settings.Default.lastNotificationAbove30Degrees.Date, DateTime.Today) < 0)
-                {
-                    System.Windows.MessageBox.Show(string.Format(resx_ns.notificationAbove30Degrees, this.Temperature));
-                    Settings.Default.lastNotificationAbove30Degrees = DateTime.Today;
-                    Settings.Default.Save();
-                    this.IsTodayNotified = true;
-                }
-                else if (this.IsTodayNotified && DateTime.Compare(Settings.Default.lastNotificationAbove30Degrees.Date, DateTime.Today) < 0)
-                {
-                    this.IsTodayNotified = false;
-                }
-            }
-            catch (Exception ex)
-            {
-                System.Windows.MessageBox.Show(ex.Message);
-                result = false;
-            }
-            return result;
-        }
-
-        private bool isTodayNotified;
-
+        private bool _isTodayNotified;
+        /// <summary>
+        /// Has the user already been notified today?
+        /// </summary>
         public bool IsTodayNotified
         {
-            get { return isTodayNotified; }
-            set { isTodayNotified = value; RaisePropertyChanged(); }
+            get { return _isTodayNotified; }
+            set { _isTodayNotified = value; RaisePropertyChanged(); }
         }
 
-
-        private class TaskWorker_DataContext
+        /// <summary>
+        /// The backgroundworker data context.
+        /// </summary>
+        private class BackgroundWorker_DataContext
         {
-            protected internal object Result = false;
-            protected internal TimerState workerState;
+            protected internal TimerState timerState;
         }
 
-        protected internal void ExecuteWorkerStart()
+        /// <summary>
+        /// Starts the timer for background worker.
+        /// </summary>
+        protected internal void StartTimerForBackgroundWorker()
         {
-            this.timerChangeState = new TimerState();
-            this.timerChangeState.TimerCanceled = false;
-            this.timerState = new TimerState();
-            this.timerState.TimerCanceled = false;
+            if (string.IsNullOrEmpty(this.APIKey))
+            {
+                System.Windows.MessageBox.Show("Missing APIKey");
+                return;
+            }
+            this.timerState = new TimerState
+            {
+                TimerCanceled = false
+            };
 
             // And save a reference for Dispose.
-            this.timerState.TimerReference = new Timer(new TimerCallback((object workerState) =>
+            this.timerState.TimerReference = new Timer(new TimerCallback((object timerState) =>
             {
-                this.Execute(workerState);
+                if (!this._isRunning)
+                {
+                    this.TaskWorker.RunWorkerAsync(new BackgroundWorker_DataContext() { timerState = timerState as TimerState });
+                }
             }), this.timerState, new TimeSpan(0, 0, 0), new TimeSpan(0, 0, 30));
         }
 
-        internal void Execute(object workerState)
-        {
-            if (!this.IsRunning)
-            {
-                this.TaskWorker.RunWorkerAsync(new TaskWorker_DataContext() { workerState = workerState as TimerState });
-            }
-        }
-
-        protected internal void ExecuteWorkerStop()
+        /// <summary>
+        /// Stops the timer for background worker.
+        /// </summary>
+        protected internal void StopTimerForBackgroundWorker()
         {
             try
             {
-                if (this.timerChangeState != null)
-                {
-                    this.timerChangeState.TimerCanceled = true;
-                    this.timerChangeState.TimerReference?.Dispose();
-                }
                 if (this.timerState != null)
                 {
                     this.timerState.TimerCanceled = true;
@@ -210,20 +187,24 @@ namespace WeatherStation.ViewModel
         }
 
         /// <summary>
-        /// The timer change state
-        /// </summary>
-        internal TimerState timerChangeState;
-
-        /// <summary>
         /// The background worker state
         /// </summary>
         internal TimerState timerState;
 
+        /// <summary>
+        /// A backgroundworker timer state.
+        /// </summary>
         internal class TimerState
         {
             // Used to hold parameters for calls to TimerTask.
-            protected internal Timer TimerReference;
-            protected internal bool TimerCanceled;
+            /// <summary>
+            /// Gets or sets the timer reference.
+            /// </summary>
+            protected internal Timer TimerReference { get; set; }
+            /// <summary>
+            /// Gets or sets a value indicating whether timer canceled.
+            /// </summary>
+            protected internal bool TimerCanceled { get; set; }
         }
 
         /// <summary>
@@ -268,6 +249,9 @@ namespace WeatherStation.ViewModel
 
         private double humidity;
 
+        /// <summary>
+        /// Gets or sets the humidity.
+        /// </summary>
         public double Humidity
         {
             get { return humidity; }
@@ -278,6 +262,9 @@ namespace WeatherStation.ViewModel
             }
         }
 
+        /// <summary>
+        /// Gets or sets the latitude of the location of the weather data.
+        /// </summary>
         public decimal Latitude
         {
             get
@@ -292,6 +279,9 @@ namespace WeatherStation.ViewModel
             }
         }
 
+        /// <summary>
+        /// Gets or sets the longitude of the location of the weather data.
+        /// </summary>
         public decimal Longitude
         {
             get
@@ -308,6 +298,9 @@ namespace WeatherStation.ViewModel
 
         private string plz;
 
+        /// <summary>
+        /// Gets or sets the zip code.
+        /// </summary>
         public string Plz
         {
             get { return plz; }
@@ -320,6 +313,9 @@ namespace WeatherStation.ViewModel
 
         private string country;
 
+        /// <summary>
+        /// Gets or sets the country code.
+        /// </summary>
         public string Country
         {
             get { return country; }
@@ -331,6 +327,9 @@ namespace WeatherStation.ViewModel
         }
 
         private DateTime lastSuccessful;
+        /// <summary>
+        /// The last successful weatherdata update
+        /// </summary>
         public DateTime LastSuccessful
         {
             get
@@ -344,108 +343,83 @@ namespace WeatherStation.ViewModel
             }
         }
 
-        private DateTime lastExecuted;
-        public DateTime LastExecuted
-        {
-            get
-            {
-                return lastExecuted;
-            }
-            private set
-            {
-                lastExecuted = value;
-            }
-        }
-
-        private bool isRunning;
-        public bool IsRunning
-        {
-            get
-            {
-                return isRunning;
-            }
-            private set
-            {
-                isRunning = value;
-            }
-        }
-
         private ICommand btnStartGetWeatherData_ClickCommand;
+        /// <summary>
+        /// Gets the button BtnStartGetWeatherData click command.
+        /// </summary>
         public ICommand BtnStartGetWeatherData_ClickCommand
-        {
-            get
-            {
-                return btnStartGetWeatherData_ClickCommand ?? (btnStartGetWeatherData_ClickCommand = new RelayCommand(this.BtnStartGetWeatherData_Click, param => this.BtnStartGetWeatherData_CanExecute));
-            }
-        }
+            => btnStartGetWeatherData_ClickCommand ?? (btnStartGetWeatherData_ClickCommand = new RelayCommand(this.BtnStartGetWeatherData_Click, _ => this.BtnStartGetWeatherData_CanExecute));
 
+        /// <summary>
+        /// Gets a value indicating whether the command of Button BtnStartGetWeatherData can execute.
+        /// </summary>
         public bool BtnStartGetWeatherData_CanExecute
-        {
-            get
-            {
-                // check if executing is allowed, i.e., validate, check if a process is running, etc. 
-                return this.timerState.TimerCanceled;
-            }
-        }
-
-        public void BtnStartGetWeatherData_Click(object obj)
-        {
-            this.ExecuteWorkerStart();
-        }
+            => this.timerState.TimerCanceled;
 
         private ICommand btnStopGetWeatherData_ClickCommand;
+        /// <summary>
+        /// Gets the button BtnStopGetWeatherData click command.
+        /// </summary>
         public ICommand BtnStopGetWeatherData_ClickCommand
-        {
-            get
-            {
-                return btnStopGetWeatherData_ClickCommand ?? (btnStopGetWeatherData_ClickCommand = new RelayCommand(this.BtnStopGetWeatherData_Click, param => this.BtnStopGetWeatherData_CanExecute));
-            }
-        }
+            => btnStopGetWeatherData_ClickCommand ?? (btnStopGetWeatherData_ClickCommand = new RelayCommand(this.BtnStopGetWeatherData_Click, _ => this.BtnStopGetWeatherData_CanExecute));
 
+        /// <summary>
+        /// Gets a value indicating whether the command of Button BtnStopGetWeatherData can execute.
+        /// </summary>
         public bool BtnStopGetWeatherData_CanExecute
-        {
-            get
-            {
-                // check if executing is allowed, i.e., validate, check if a process is running, etc. 
-                return !this.timerState.TimerCanceled;
-            }
-        }
-
-        public void BtnStopGetWeatherData_Click(object obj)
-        {
-            this.ExecuteWorkerStop();
-        }
+            => !this.timerState.TimerCanceled;
 
         private ICommand btnGetCoordinates_ClickCommand;
+        /// <summary>
+        /// Gets the button BtnGetCoordinates click command.
+        /// </summary>
         public ICommand BtnGetCoordinates_ClickCommand
-        {
-            get
-            {
-                return btnGetCoordinates_ClickCommand ?? (btnGetCoordinates_ClickCommand = new RelayCommand(this.BtnGetCoordinates_Click, param => this.BtnGetCoordinates_CanExecute));
-            }
-        }
+            => btnGetCoordinates_ClickCommand ?? (btnGetCoordinates_ClickCommand = new RelayCommand(this.BtnGetCoordinates_Click, _ => this.BtnGetCoordinates_CanExecute));
 
+        private bool btnGetCoordinates_CanExecute = true;
+        /// <summary>
+        /// Gets a value indicating whether the command of Button BtnGetCoordinates can execute.
+        /// </summary>
         public bool BtnGetCoordinates_CanExecute
+            => this.btnGetCoordinates_CanExecute;
+
+        /// <summary>
+        /// Will execute if button BtnStartGetWeatherData clicked and starting the timer for backgroundworker.
+        /// </summary>
+        /// <param name="commandParameter">The commandParameter.</param>
+        public void BtnStartGetWeatherData_Click(object commandParameter)
         {
-            get
-            {
-                // check if executing is allowed, i.e., validate, check if a process is running, etc. 
-                return true;
-            }
+            this.StartTimerForBackgroundWorker();
         }
 
-        public void BtnGetCoordinates_Click(object parameter)
+        /// <summary>
+        /// Will execute if button BtnStopGetWeatherData clicked.
+        /// </summary>
+        /// <param name="commandParameter">The commandParameter.</param>
+        public void BtnStopGetWeatherData_Click(object commandParameter)
+        {
+            this.StopTimerForBackgroundWorker();
+        }
+
+        /// <summary>
+        /// Will execute if button BtnGetCoordinates clicked. 
+        /// If latitude and longitude not within parameters seted will the coordinates from the location of zip and country within the parameters geted from the api. 
+        /// Then will the coordinates within the viewmodel seted.
+        /// </summary>
+        /// <param name="commandParameter">The commandParameter.</param>
+        public void BtnGetCoordinates_Click(object commandParameter)
         {
             try
             {
-                var values = (object[])parameter;
-                var plz = (string)values[0];
-                var country = (string)values[1];
+                this.btnGetCoordinates_CanExecute = false;
+                var parameter = (object[])commandParameter;
+                var plz = (string)parameter[0];
+                var country = (string)parameter[1];
                 var accessUri = "http://api.openweathermap.org/geo/1.0/zip";
-                if (!string.IsNullOrWhiteSpace(values[2].ToString()) && !string.IsNullOrWhiteSpace(values[3].ToString()))
+                if (!string.IsNullOrWhiteSpace(parameter[2].ToString()) && !string.IsNullOrWhiteSpace(parameter[3].ToString()))
                 {
-                    this.Latitude = Convert.ToDecimal(values[2].ToString());
-                    this.Longitude = Convert.ToDecimal(values[3].ToString());
+                    this.Latitude = Convert.ToDecimal(parameter[2].ToString());
+                    this.Longitude = Convert.ToDecimal(parameter[3].ToString());
                 }
                 else if (!string.IsNullOrWhiteSpace(plz) && !string.IsNullOrWhiteSpace(country))
                 {
@@ -464,6 +438,46 @@ namespace WeatherStation.ViewModel
             {
                 System.Windows.MessageBox.Show(ex.Message);
             }
+            this.btnGetCoordinates_CanExecute = true;
+        }
+
+        /// <summary>
+        /// Gets the weather data from the api
+        /// </summary>
+        /// <returns>True if successful getted the weatherdatas, false if not successful</returns>
+        public bool GetWeatherData()
+        {
+            var result = false;
+            try
+            {
+                var accessUri = Settings.Default.ApiUrl;
+                using (var WS = new RESTWebserviceConnection(accessUri, RESTWebserviceConnection.ProvidedContentTypes.json))
+                {
+                    WS.Accept = RESTWebserviceConnection.ProvidedContentTypes.json;
+                    var response = WS.Get<API.CurrentWeatherData.Response.Get>("", new List<string> { "lat=" + this.Latitude, "lon=" + this.Longitude, "units=metric", "lang=de", "appid=" + this.APIKey });
+                    this.Temperature = response.main.temp;
+                    this.Pressure = response.main.pressure;
+                    this.Humidity = response.main.humidity;
+                    result = true;
+                }
+                if (this.Temperature >= 30 && DateTime.Compare(Settings.Default.lastNotificationAbove30Degrees.Date, DateTime.Today) < 0)
+                {
+                    System.Windows.MessageBox.Show(string.Format(resx_ns.notificationAbove30Degrees, this.Temperature));
+                    Settings.Default.lastNotificationAbove30Degrees = DateTime.Today;
+                    Settings.Default.Save();
+                    this.IsTodayNotified = true;
+                }
+                else if (this.IsTodayNotified && DateTime.Compare(Settings.Default.lastNotificationAbove30Degrees.Date, DateTime.Today) < 0)
+                {
+                    this.IsTodayNotified = false;
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Windows.MessageBox.Show(ex.Message);
+                result = false;
+            }
+            return result;
         }
     }
 }
