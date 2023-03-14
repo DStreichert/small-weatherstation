@@ -103,10 +103,17 @@ namespace WeatherStation.ViewModel
             {
                 if (this._apiKey == null)
                 {
-                    using (var fs = new FileStream("apikey.config", FileMode.OpenOrCreate))
-                    using (var sr = new StreamReader(fs))
+                    try
                     {
-                        this._apiKey = sr.ReadToEnd();
+                        using (var fs = new FileStream("apikey.config", FileMode.Open))
+                        using (var sr = new StreamReader(fs))
+                        {
+                            this._apiKey = sr.ReadToEnd();
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Windows.MessageBox.Show(ex.Message);
                     }
                 }
                 return this._apiKey;
@@ -136,6 +143,11 @@ namespace WeatherStation.ViewModel
         /// </summary>
         protected internal void StartTimerForBackgroundWorker()
         {
+            if (string.IsNullOrEmpty(this.APIKey))
+            {
+                System.Windows.MessageBox.Show("Missing APIKey");
+                return;
+            }
             this.timerState = new TimerState
             {
                 TimerCanceled = false
